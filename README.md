@@ -19,6 +19,10 @@ _NOTE:_ This application does not have any in-memory storage i.e. refreshing the
 * Output data to csv
 * Dark mode support (based on system preference)
 
-## How to run?
+## How to run locally?
 
 Run `npm run dev` and the webpage will be available at http://localhost:5173/
+
+## How to deploy to GitHub pages
+
+Run `npm run deploy` and webpage will be available at the relevant URI.
