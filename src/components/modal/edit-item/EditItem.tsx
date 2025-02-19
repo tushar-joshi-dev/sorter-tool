@@ -1,4 +1,4 @@
-import { KeyboardEvent, useRef, useState } from "react";
+import { KeyboardEvent, useEffect, useRef, useState } from "react";
 import DataEntry from "../../../model/DataEntry"
 import Modal from "../base/Modal";
 import { ModalType } from "../base/type";
@@ -41,6 +41,12 @@ const EditItem = (props: EditItemProps) => {
             contentInputRef.current.value = resetContent;
         }
     };
+
+    useEffect(() => {
+        if (props.show) {
+            contentInputRef.current?.focus();
+        }
+    }, [props.show]);
 
     return (
         <Modal type={ModalType.UPDATE_CONFIRM} show={props.show} headerText={props.data ? "Edit entry - " + props.data.text : "New entry"} confirmText="Save" onConfirm={handleConfirm} cancelText="Cancel" onCancel={handleCancel}>

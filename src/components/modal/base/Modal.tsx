@@ -16,7 +16,6 @@ interface ModalProps {
 const Modal = (props: ModalProps) => {
     const ref = useOutsideClick(() => {
         if (props.show) {
-            console.log('Outside click');
             props.onCancel();
         }
     });
