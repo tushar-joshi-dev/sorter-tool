@@ -8,13 +8,16 @@ import { restrictToParentElement } from "@dnd-kit/modifiers";
 import CsvExport from "../csv-export/CsvExport";
 import { toast, ToastType } from "../toast/ToastProvider";
 import EditItem from "../modal/edit-item/EditItem";
-import { PlusIcon } from "@heroicons/react/24/solid";
+import { ArrowPathRoundedSquareIcon, PlusIcon } from "@heroicons/react/24/solid";
 import { v4 as uuidGenerator } from 'uuid';
+import useLocalStorage, { CHECKED_DATA_KEY, UNCHECKED_DATA_KEY } from "../../hooks/LocalStorage";
+import DeleteConfirmation from "../modal/delete-confirm/DeleteConfirmation";
 
 const SorterTool = () => {
-    const [checkedData, setCheckedData] = useState<DataEntry[]>([]);
-    const [uncheckedData, setUncheckedData] = useState<DataEntry[]>([]);
+    const [checkedData, setCheckedData] = useLocalStorage<DataEntry[]>(CHECKED_DATA_KEY, []);
+    const [uncheckedData, setUncheckedData] = useLocalStorage<DataEntry[]>(UNCHECKED_DATA_KEY, []);
     const [displayEdit, setDisplayEdit] = useState<boolean>(false);
+    const [displayDeleteConfirm, setDisplayDeleteConfirm] = useState<boolean>(false);
 
     const handleDataImport = (importedData: any[]) => {
         const checkedItems: DataEntry[] = [];
@@ -64,7 +67,6 @@ const SorterTool = () => {
             data.checked = true;
             setCheckedData(checkedData.toSpliced(checkedData.length, 0, data));
         }
-
     };
 
     const setAsToDo = (data: DataEntry) => {
@@ -109,17 +111,29 @@ const SorterTool = () => {
             checked: false
         };
         setUncheckedData(uncheckedData.toSpliced(uncheckedData.length, 0, entry));
-    }
+    };
+
+    const handleDeleteConfirmed = () => {
+        setDisplayDeleteConfirm(false);
+        setCheckedData([]);
+        setUncheckedData([]);
+    };
 
     return (
         <div className='max-w-5xl mx-auto'>
-            <div className="w-full grid grid-cols-3 px-10 py-5 gap-10">
+            <div className="w-full grid grid-cols-2 px-5 py-5 gap-5">
                 <CsvImport disabled={checkedData.length > 0 || uncheckedData.length > 0} onData={handleDataImport} />
-                <CsvExport disabled={checkedData.length < 1 && uncheckedData.length < 1} setExportData={provideExportData} />
-                <button type="button" onClick={() => setDisplayEdit(true)} className="px-5 py-2.5 w-full h-full item-center justify-center rounded text-white text-sm border-none outline-none bg-cyan-500 dark:bg-cyan-800 hover:enabled:bg-cyan-700 hover:enabled:cursor-pointer disabled:opacity-50">
-                    <p>New entry</p>
-                    <PlusIcon className="size-6 inline-flex" />
-                </button>
+                <div className="w-full grid grid-cols-3 gap-5">
+                    <CsvExport disabled={checkedData.length < 1 && uncheckedData.length < 1} setExportData={provideExportData} />
+                    <button type="button" onClick={() => setDisplayEdit(true)} className="px-5 py-2.5 w-full h-full item-center justify-center rounded text-white text-sm border-none outline-none bg-cyan-500 dark:bg-cyan-800 hover:enabled:bg-cyan-700 hover:enabled:cursor-pointer disabled:opacity-50">
+                        <p>New entry</p>
+                        <PlusIcon className="size-6 inline-flex" />
+                    </button>
+                    <button type="button" onClick={() => setDisplayDeleteConfirm(true)} className="px-5 py-2.5 w-full h-full item-center justify-center rounded text-white text-sm border-none outline-none bg-orange-500 dark:bg-orange-800 hover:enabled:bg-orange-700 hover:enabled:cursor-pointer disabled:opacity-50">
+                        <p>Delete all & reset</p>
+                        <ArrowPathRoundedSquareIcon className="size-6 inline-flex" />
+                    </button>
+                </div>
             </div>
             <EditItem show={displayEdit} onCancel={() => setDisplayEdit(false)} onConfirm={handleNewRecord} />
             <hr className="solid text-gray-600 dark:text-gray-400" />
@@ -144,6 +158,7 @@ const SorterTool = () => {
                     return (<SortItem key={data.id} data={data} toggleCheck={() => setAsToDo(data)} onDelete={() => { }} onUpdate={(text) => handleCheckedEdit(data.id, text)} />)
                 })}
             </div>
+            <DeleteConfirmation data={{ id: 'delete-id', text: 'All Items', checked: false }} additionalCautionMessage={'NOTE: This will delete all your entries. If you wish to export your content, hit cancel & download data as csv'} show={displayDeleteConfirm} onCancel={() => setDisplayDeleteConfirm(false)} onConfirm={handleDeleteConfirmed} />
         </div>
     );
 };
