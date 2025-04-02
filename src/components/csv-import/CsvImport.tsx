@@ -18,6 +18,9 @@ const CsvImport = (props: CsvImportProps) => {
         if (props.disabled) {
             setDisabled(true);
             setStatusText('Disabled');
+        } else {
+            setDisabled(false);
+            setStatusText('Ready');
         }
     }, [props.disabled]);
 
@@ -32,7 +35,7 @@ const CsvImport = (props: CsvImportProps) => {
         setDisabled(true);
         if (event?.target?.files?.length > 0) {
             const file: File = event.target.files[0];
-            if (file.type !== 'text/csv') {
+            if (file.name.split('.').pop() !== 'csv') {
                 handleError('Invalid file type');
             } else {
                 setStatusText(`Parsing ${file.name}`);
@@ -49,6 +52,7 @@ const CsvImport = (props: CsvImportProps) => {
                             props.onData(data);
                         }
                     },
+                    skipEmptyLines: true,
                     error: (err: Error) => {
                         handleError(err.message);
                     }

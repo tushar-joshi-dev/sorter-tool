@@ -28,7 +28,7 @@ const SorterTool = () => {
                 toast('Invalid data schema', ToastType.ERROR);
                 return;
             }
-            const dataEntry = item as DataEntry;
+            const dataEntry = { ...item, notes: item['notes'] ?? '' } as DataEntry;
             if (dataEntry.checked) {
                 checkedItems.push(dataEntry);
             } else {
@@ -78,11 +78,12 @@ const SorterTool = () => {
         }
     };
 
-    const handleUncheckedEdit = (id: string, text: string) => {
+    const handleUncheckedEdit = (id: string, text: string, notes: string) => {
         const itemIndex = uncheckedData.findIndex((item) => item.id === id);
         if (itemIndex > -1) {
             const updatedItem = uncheckedData[itemIndex];
             updatedItem.text = text;
+            updatedItem.notes = notes;
             setUncheckedData(uncheckedData.toSpliced(itemIndex, 1, updatedItem));
         }
     };
@@ -94,20 +95,22 @@ const SorterTool = () => {
         }
     }
 
-    const handleCheckedEdit = (id: string, text: string) => {
+    const handleCheckedEdit = (id: string, text: string, notes: string) => {
         const itemIndex = checkedData.findIndex((item) => item.id === id);
         if (itemIndex > -1) {
             const updatedItem = checkedData[itemIndex];
             updatedItem.text = text;
+            updatedItem.notes = notes;
             setCheckedData(checkedData.toSpliced(itemIndex, 1, updatedItem));
         }
     };
 
-    const handleNewRecord = (text: string) => {
+    const handleNewRecord = (text: string, notes: string) => {
         setDisplayEdit(false);
         const entry: DataEntry = {
             id: uuidGenerator(),
             text,
+            notes,
             checked: false
         };
         setUncheckedData(uncheckedData.toSpliced(uncheckedData.length, 0, entry));
@@ -144,7 +147,7 @@ const SorterTool = () => {
                 <DndContext modifiers={[restrictToParentElement]} onDragEnd={handleDrag}>
                     <SortableContext items={uncheckedData} strategy={verticalListSortingStrategy}>
                         {uncheckedData.map(data => {
-                            return (<SortItem key={data.id} data={data} toggleCheck={() => markAsComplete(data)} onDelete={() => handleUncheckedDelete(data.id)} onUpdate={(text) => handleUncheckedEdit(data.id, text)} />)
+                            return (<SortItem key={data.id} data={data} toggleCheck={() => markAsComplete(data)} onDelete={() => handleUncheckedDelete(data.id)} onUpdate={(text, notes) => handleUncheckedEdit(data.id, text, notes)} />)
                         })}
                     </SortableContext>
                 </DndContext>
@@ -155,10 +158,10 @@ const SorterTool = () => {
             </h5>
             <div className="w-full text-black dark:text-white grid gap-2 py-5">
                 {checkedData.map(data => {
-                    return (<SortItem key={data.id} data={data} toggleCheck={() => setAsToDo(data)} onDelete={() => { }} onUpdate={(text) => handleCheckedEdit(data.id, text)} />)
+                    return (<SortItem key={data.id} data={data} toggleCheck={() => setAsToDo(data)} onDelete={() => { }} onUpdate={(text, notes) => handleCheckedEdit(data.id, text, notes)} />)
                 })}
             </div>
-            <DeleteConfirmation data={{ id: 'delete-id', text: 'All Items', checked: false }} additionalCautionMessage={'NOTE: This will delete all your entries. If you wish to export your content, hit cancel & download data as csv'} show={displayDeleteConfirm} onCancel={() => setDisplayDeleteConfirm(false)} onConfirm={handleDeleteConfirmed} />
+            <DeleteConfirmation data={{ id: 'delete-id', text: 'All Items', notes: '', checked: false }} additionalCautionMessage={'NOTE: This will delete all your entries. If you wish to export your content, hit cancel & download data as csv'} show={displayDeleteConfirm} onCancel={() => setDisplayDeleteConfirm(false)} onConfirm={handleDeleteConfirmed} />
         </div>
     );
 };
