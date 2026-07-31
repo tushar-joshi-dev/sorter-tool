@@ -8,12 +8,14 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import DeleteConfirmation from "../modal/delete-confirm/DeleteConfirmation";
 import { useState } from "react";
 import EditItem from "../modal/edit-item/EditItem";
+import { DEFAULT_GROUP_COLOR, GROUP_COLORS, GroupColorPair } from "../../constants/ValueConstants";
 
 interface SortItemProps {
     data: DataEntry;
+    groupIndex?: number;
     toggleCheck: () => void;
     onDelete: () => void;
-    onUpdate: (text: string, notes: string) => void;
+    onUpdate: (text: string, notes: string, group: string) => void;
 }
 
 const SortItem = (props: SortItemProps) => {
@@ -26,6 +28,8 @@ const SortItem = (props: SortItemProps) => {
         transition,
     };
 
+    const groupThemePair: GroupColorPair = props.groupIndex === undefined || props.groupIndex === null || props.groupIndex < 0 ? DEFAULT_GROUP_COLOR : GROUP_COLORS[props.groupIndex % GROUP_COLORS.length];
+
     const handleCheckClick = () => {
         props.toggleCheck();
     };
@@ -35,9 +39,9 @@ const SortItem = (props: SortItemProps) => {
         props.onDelete();
     };
 
-    const handleEditConfirmed = (text: string, notes: string) => {
+    const handleEditConfirmed = (text: string, notes: string, group: string) => {
         setDisplayEdit(false);
-        props.onUpdate(text, notes);
+        props.onUpdate(text, notes, group);
     };
 
     const toggleCheckClass = props.data.checked ? "bg-yellow-200 dark:bg-yellow-900" : "bg-blue-200 dark:bg-blue-900";
@@ -53,6 +57,19 @@ const SortItem = (props: SortItemProps) => {
             <button disabled={props.data.checked} title="Drag to reorder" {...attributes} {...listeners} className="cursor-move disabled:opacity-20 disabled:cursor-not-allowed">
                 <ChevronUpDownIcon className="size-6" />
             </button>
+            <div className="w-3xs content-center">
+                <div className="rounded flex gap-2 py-0.5 w-full justify-center cursor-pointer bg-[var(--bg-light)] text-[var(--text-light)] dark:bg-[var(--bg-dark)] dark:text-[var(--text-dark)]"
+                    style={{
+                        // Map hex codes to CSS variables
+                        '--bg-light': groupThemePair.light.bgColor,
+                        '--text-light': groupThemePair.light.color,
+                        '--bg-dark': groupThemePair.dark.bgColor,
+                        '--text-dark': groupThemePair.dark.color,
+                    } as React.CSSProperties} // Cast needed for custom properties in TypeScript
+                >
+                    {props.data.group}
+                </div>
+            </div>
             <div className="w-full content-center">
                 <div className="w-full flex">
                     {props.data.text}
@@ -67,7 +84,7 @@ const SortItem = (props: SortItemProps) => {
                     </Linkify>
                 </div>
             </div>
-            <div className="w-3xs content-center">
+            <div className="w-2xs content-center">
                 <button title={props.data.checked ? "Set as To-Do" : "Mark as complete"} onClick={handleCheckClick} className={`rounded flex gap-2 py-0.5 w-full justify-center cursor-pointer ${toggleCheckClass}`}>
                     {
                         props.data.checked ? (

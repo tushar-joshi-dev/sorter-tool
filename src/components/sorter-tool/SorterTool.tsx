@@ -12,12 +12,28 @@ import { ArrowPathRoundedSquareIcon, PlusIcon } from "@heroicons/react/24/solid"
 import { v4 as uuidGenerator } from 'uuid';
 import useLocalStorage, { CHECKED_DATA_KEY, UNCHECKED_DATA_KEY } from "../../hooks/LocalStorage";
 import DeleteConfirmation from "../modal/delete-confirm/DeleteConfirmation";
+import { DEFAULT_GROUP } from "../../constants/ValueConstants";
 
 const SorterTool = () => {
-    const [checkedData, setCheckedData] = useLocalStorage<DataEntry[]>(CHECKED_DATA_KEY, []);
-    const [uncheckedData, setUncheckedData] = useLocalStorage<DataEntry[]>(UNCHECKED_DATA_KEY, []);
+    const mergeDataEntryDefault = (item: Partial<DataEntry>): DataEntry => ({
+        group: DEFAULT_GROUP,
+        ...item,
+    }) as DataEntry;
+
+    const [checkedData, setCheckedData] = useLocalStorage<DataEntry[]>(CHECKED_DATA_KEY, [], {mergeItemDefaults: mergeDataEntryDefault});
+    const [uncheckedData, setUncheckedData] = useLocalStorage<DataEntry[]>(UNCHECKED_DATA_KEY, [], {mergeItemDefaults: mergeDataEntryDefault});
     const [displayEdit, setDisplayEdit] = useState<boolean>(false);
     const [displayDeleteConfirm, setDisplayDeleteConfirm] = useState<boolean>(false);
+
+    const sortAndSet = (items: DataEntry[], setData: (newValue: DataEntry[]) => void): void => {
+        // sort
+        items.sort
+        setData(items.toSorted((item1, item2) => {
+            if (item1.group < item2.group) return -1;
+            if (item1.group > item2.group) return 1;
+            return 0; // returns 0 if groups match to keep relative order
+        }));
+    };
 
     const handleDataImport = (importedData: any[]) => {
         const checkedItems: DataEntry[] = [];
@@ -28,15 +44,15 @@ const SorterTool = () => {
                 toast('Invalid data schema', ToastType.ERROR);
                 return;
             }
-            const dataEntry = { ...item, notes: item['notes'] ?? '' } as DataEntry;
+            const dataEntry = { ...item, notes: item['notes'] ?? '', group: item['group'] ?? DEFAULT_GROUP } as DataEntry;
             if (dataEntry.checked) {
                 checkedItems.push(dataEntry);
             } else {
                 uncheckedItems.push(dataEntry);
             }
         });
-        setCheckedData(checkedItems);
-        setUncheckedData(uncheckedItems);
+        sortAndSet(checkedItems, setCheckedData);
+        sortAndSet(uncheckedItems, setUncheckedData);
     };
 
     const provideExportData = () => {
@@ -56,7 +72,7 @@ const SorterTool = () => {
         if (over && active.id !== over.id) {
             const oldIndex = uncheckedData.findIndex((item) => item.id === active.id);
             const newIndex = uncheckedData.findIndex((item) => item.id === over.id);
-            setUncheckedData(arrayMove(uncheckedData, oldIndex, newIndex));
+            sortAndSet(arrayMove(uncheckedData, oldIndex, newIndex), setUncheckedData);
         }
     };
 
@@ -65,7 +81,7 @@ const SorterTool = () => {
         if (itemIndex > -1) {
             setUncheckedData(uncheckedData.toSpliced(itemIndex, 1));
             data.checked = true;
-            setCheckedData(checkedData.toSpliced(checkedData.length, 0, data));
+            sortAndSet(checkedData.toSpliced(checkedData.length, 0, data), setCheckedData)
         }
     };
 
@@ -74,17 +90,18 @@ const SorterTool = () => {
         if (itemIndex > -1) {
             setCheckedData(checkedData.toSpliced(itemIndex, 1));
             data.checked = false;
-            setUncheckedData(uncheckedData.toSpliced(uncheckedData.length, 0, data));
+            sortAndSet(uncheckedData.toSpliced(uncheckedData.length, 0, data), setUncheckedData);
         }
     };
 
-    const handleUncheckedEdit = (id: string, text: string, notes: string) => {
+    const handleUncheckedEdit = (id: string, text: string, notes: string, group: string) => {
         const itemIndex = uncheckedData.findIndex((item) => item.id === id);
         if (itemIndex > -1) {
             const updatedItem = uncheckedData[itemIndex];
             updatedItem.text = text;
             updatedItem.notes = notes;
-            setUncheckedData(uncheckedData.toSpliced(itemIndex, 1, updatedItem));
+            updatedItem.group = group;
+            sortAndSet(uncheckedData.toSpliced(itemIndex, 1, updatedItem), setUncheckedData);
         }
     };
 
@@ -95,25 +112,27 @@ const SorterTool = () => {
         }
     }
 
-    const handleCheckedEdit = (id: string, text: string, notes: string) => {
+    const handleCheckedEdit = (id: string, text: string, notes: string, group: string) => {
         const itemIndex = checkedData.findIndex((item) => item.id === id);
         if (itemIndex > -1) {
             const updatedItem = checkedData[itemIndex];
             updatedItem.text = text;
             updatedItem.notes = notes;
-            setCheckedData(checkedData.toSpliced(itemIndex, 1, updatedItem));
+            updatedItem.group = group;
+            sortAndSet(checkedData.toSpliced(itemIndex, 1, updatedItem), setCheckedData);
         }
     };
 
-    const handleNewRecord = (text: string, notes: string) => {
+    const handleNewRecord = (text: string, notes: string, group: string) => {
         setDisplayEdit(false);
         const entry: DataEntry = {
             id: uuidGenerator(),
             text,
             notes,
-            checked: false
+            checked: false,
+            group: group ?? 'default',
         };
-        setUncheckedData(uncheckedData.toSpliced(uncheckedData.length, 0, entry));
+        sortAndSet(uncheckedData.toSpliced(uncheckedData.length, 0, entry), setUncheckedData);
     };
 
     const handleDeleteConfirmed = () => {
@@ -146,9 +165,19 @@ const SorterTool = () => {
             <div className="w-full text-black dark:text-white grid gap-2 py-5">
                 <DndContext modifiers={[restrictToParentElement]} onDragEnd={handleDrag}>
                     <SortableContext items={uncheckedData} strategy={verticalListSortingStrategy}>
-                        {uncheckedData.map(data => {
-                            return (<SortItem key={data.id} data={data} toggleCheck={() => markAsComplete(data)} onDelete={() => handleUncheckedDelete(data.id)} onUpdate={(text, notes) => handleUncheckedEdit(data.id, text, notes)} />)
-                        })}
+                        {(() => {
+                            const renderedItems = [];
+                            let groups: string[] = [];
+                            for (const data of uncheckedData) {
+                                let groupIndex = groups.findIndex(groupEntry => groupEntry === data.group);
+                                if (groupIndex == -1) {
+                                    groups.push(data.group);
+                                    groupIndex = groups.length - 1;
+                                }
+                                renderedItems.push(<SortItem key={data.id} data={data} groupIndex={groupIndex} toggleCheck={() => markAsComplete(data)} onDelete={() => handleUncheckedDelete(data.id)} onUpdate={(text, notes, group) => handleUncheckedEdit(data.id, text, notes, group)} />);
+                            }
+                            return renderedItems;
+                        })()}
                     </SortableContext>
                 </DndContext>
             </div>
@@ -158,10 +187,10 @@ const SorterTool = () => {
             </h5>
             <div className="w-full text-black dark:text-white grid gap-2 py-5">
                 {checkedData.map(data => {
-                    return (<SortItem key={data.id} data={data} toggleCheck={() => setAsToDo(data)} onDelete={() => { }} onUpdate={(text, notes) => handleCheckedEdit(data.id, text, notes)} />)
+                    return (<SortItem key={data.id} data={data} toggleCheck={() => setAsToDo(data)} onDelete={() => { }} onUpdate={(text, notes, group) => handleCheckedEdit(data.id, text, notes, group)} />)
                 })}
             </div>
-            <DeleteConfirmation data={{ id: 'delete-id', text: 'All Items', notes: '', checked: false }} additionalCautionMessage={'NOTE: This will delete all your entries. If you wish to export your content, hit cancel & download data as csv'} show={displayDeleteConfirm} onCancel={() => setDisplayDeleteConfirm(false)} onConfirm={handleDeleteConfirmed} />
+            <DeleteConfirmation data={{ id: 'delete-id', text: 'All Items', notes: '', checked: false, group: DEFAULT_GROUP }} additionalCautionMessage={'NOTE: This will delete all your entries. If you wish to export your content, hit cancel & download data as csv'} show={displayDeleteConfirm} onCancel={() => setDisplayDeleteConfirm(false)} onConfirm={handleDeleteConfirmed} />
         </div>
     );
 };

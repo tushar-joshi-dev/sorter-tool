@@ -3,29 +3,34 @@ import DataEntry from "../../../model/DataEntry"
 import Modal from "../base/Modal";
 import { ModalType } from "../base/type";
 import { toast, ToastType } from "../../toast/ToastProvider";
+import { DEFAULT_GROUP } from "../../../constants/ValueConstants";
 
 interface EditItemProps {
     data?: DataEntry;
     show: boolean;
-    onConfirm: (text: string, notes: string) => void;
+    onConfirm: (text: string, notes: string, group: string) => void;
     onCancel: () => void;
 }
 
 const EditItem = (props: EditItemProps) => {
     const [defaultContent, setDefaultContent] = useState<string>(props.data?.text ?? '');
     const [defaultNotes, setDefaultNotes] = useState<string>(props.data?.notes ?? '');
+    const [defaultGroup, setDefaultGroup] = useState<string>(props.data?.group ?? DEFAULT_GROUP);
     const contentInputRef = useRef<HTMLInputElement>(null);
     const notesInputRef = useRef<HTMLTextAreaElement>(null);
+    const groupInputRef = useRef<HTMLInputElement>(null);
     const handleConfirm = () => {
         const content = contentInputRef.current?.value;
         if (content === undefined || content === null || content.trim().length < 1) {
-            toast('Invalid text provided.', ToastType.WARN);
+            toast('Invalid content provided.', ToastType.WARN);
             return;
         }
         const notes = notesInputRef.current?.value ?? '';
+        const group = groupInputRef.current?.value ?? DEFAULT_GROUP;
         resetField(props.data ? content : '', setDefaultContent, contentInputRef);
         resetField(props.data ? notes : '', setDefaultNotes, notesInputRef);
-        props.onConfirm(content, notes);
+        resetField(props.data ? group : DEFAULT_GROUP, setDefaultGroup, groupInputRef);
+        props.onConfirm(content, notes, group);
     };
 
     const handleKeydown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -37,6 +42,7 @@ const EditItem = (props: EditItemProps) => {
     const handleCancel = () => {
         resetField(props.data?.text ?? '', setDefaultContent, contentInputRef);
         resetField(props.data?.notes ?? '', setDefaultNotes, notesInputRef);
+        resetField(props.data?.group ?? '', setDefaultGroup, groupInputRef);
         props.onCancel();
     };
 
@@ -59,9 +65,15 @@ const EditItem = (props: EditItemProps) => {
                 <label htmlFor="content" className="text-xs absolute top-[-10px] left-0">Content</label>
                 <input ref={contentInputRef} name="content" type="text" defaultValue={defaultContent} onKeyDown={handleKeydown} className="px-2 pt-5 pb-2 bg-white dark:bg-gray-800 w-full text-sm border-b-2 border-gray-100 dark:border-gray-600 focus:border-gray-400 dark:focus:border-gray-500 outline-none" />
             </div>
-            <div className="relative flex items-center text-black dark:text-white top-5 bottom-5">
+            <br></br>
+            <div className="relative flex items-center text-black dark:text-white top-0 bottom-5">
                 <label htmlFor="notes" className="text-xs absolute top-[-10px] left-0">Notes</label>
                 <textarea ref={notesInputRef} name="notes" rows={4} defaultValue={defaultNotes} className="px-2 pt-5 pb-2 bg-white dark:bg-gray-800 w-full text-sm border-b-2 border-gray-100 dark:border-gray-600 focus:border-gray-400 dark:focus:border-gray-500 outline-none resize-none" />
+            </div>
+            <br></br>
+            <div className="relative flex items-center text-black dark:text-white top-0 bottom-5">
+                <label htmlFor="group" className="text-xs absolute top-[-10px] left-0">Group</label>
+                <input ref={groupInputRef} name="group" type="text" defaultValue={defaultGroup} onKeyDown={handleKeydown} className="px-2 pt-5 pb-2 bg-white dark:bg-gray-800 w-full text-sm border-b-2 border-gray-100 dark:border-gray-600 focus:border-gray-400 dark:focus:border-gray-500 outline-none" />
             </div>
         </Modal>
     );
